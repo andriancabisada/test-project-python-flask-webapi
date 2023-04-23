@@ -26,6 +26,7 @@ def get_products():
         products.append(product)
     return jsonify(products)
 
+
 @app.route('/products/<int:product_id>')
 def get_product(product_id):
     cur = mysql.connection.cursor()
@@ -49,9 +50,11 @@ def create_product():
     description = request.json['description']
     category_id = request.json['category_id']
     cur = mysql.connection.cursor()
-    cur.execute("INSERT INTO products (name, description, category_id) VALUES (%s, %s, %s)", (name, description, category_id))
+    cur.execute("INSERT INTO products (name, description, category_id) VALUES (%s, %s, %s)",
+                (name, description, category_id))
     mysql.connection.commit()
     return jsonify({'success': 'Product created successfully'})
+
 
 @app.route('/products/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
@@ -59,9 +62,11 @@ def update_product(product_id):
     description = request.json['description']
     category_id = request.json['category_id']
     cur = mysql.connection.cursor()
-    cur.execute("UPDATE products SET name = %s, description = %s, category_id = %s WHERE id = %s", (name, description, category_id, product_id))
+    cur.execute("UPDATE products SET name = %s, description = %s, category_id = %s WHERE id = %s",
+                (name, description, category_id, product_id))
     mysql.connection.commit()
     return jsonify({'success': 'Product updated successfully'})
+
 
 @app.route('/products/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
@@ -69,6 +74,7 @@ def delete_product(product_id):
     cur.execute("DELETE FROM products WHERE id = %s", [product_id])
     mysql.connection.commit()
     return jsonify({'success': 'Product deleted successfully'})
+
 
 @app.route('/categories')
 def get_categories():
@@ -85,6 +91,7 @@ def get_categories():
 
     return jsonify(categories)
 
+
 @app.route('/categories/int:category_id')
 def get_category(category_id):
     cur = mysql.connection.cursor()
@@ -99,6 +106,7 @@ def get_category(category_id):
     else:
         return jsonify({'error': 'Category not found'})
 
+
 @app.route('/categories', methods=['POST'])
 def create_category():
     name = request.json['name']
@@ -107,13 +115,16 @@ def create_category():
     mysql.connection.commit()
     return jsonify({'success': 'Category created successfully'})
 
+
 @app.route('/categories/int:category_id', methods=['PUT'])
 def update_category(category_id):
     name = request.json['name']
     cur = mysql.connection.cursor()
-    cur.execute("UPDATE categories SET name = %s WHERE id = %s", (name, category_id))
+    cur.execute("UPDATE categories SET name = %s WHERE id = %s",
+                (name, category_id))
     mysql.connection.commit()
     return jsonify({'success': 'Category updated successfully'})
+
 
 @app.route('/categories/int:category_id', methods=['DELETE'])
 def delete_category(category_id):
