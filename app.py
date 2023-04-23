@@ -77,11 +77,12 @@ def get_categories():
     rows = cur.fetchall()
     categories = []
     for row in rows:
-    category = {
-    'id': row[0],
-    'name': row[1]
-    }
-    categories.append(category)
+        category = {
+            'id': row[0],
+            'name': row[1]
+        }
+        categories.append(category)
+
     return jsonify(categories)
 
 @app.route('/categories/int:category_id')
@@ -91,8 +92,8 @@ def get_category(category_id):
     row = cur.fetchone()
     if row:
         category = {
-        'id': row[0],
-        'name': row[1]
+            'id': row[0],
+            'name': row[1]
         }
         return jsonify(category)
     else:
