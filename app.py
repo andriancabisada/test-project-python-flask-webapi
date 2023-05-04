@@ -40,6 +40,7 @@ def logout():
 
 
 @app.route('/products')
+@jwt_required()
 def get_products():
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM products")
@@ -57,6 +58,7 @@ def get_products():
 
 
 @app.route('/products/<int:product_id>')
+@jwt_required()
 def get_product(product_id):
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM products WHERE id = %s", [product_id])
@@ -74,6 +76,7 @@ def get_product(product_id):
 
 
 @app.route('/products', methods=['POST'])
+@jwt_required()
 def create_product():
     name = request.json['name']
     description = request.json['description']
@@ -86,6 +89,7 @@ def create_product():
 
 
 @app.route('/products/<int:product_id>', methods=['PUT'])
+@jwt_required()
 def update_product(product_id):
     name = request.json['name']
     description = request.json['description']
@@ -98,6 +102,7 @@ def update_product(product_id):
 
 
 @app.route('/products/<int:product_id>', methods=['DELETE'])
+@jwt_required()
 def delete_product(product_id):
     cur = mysql.connection.cursor()
     cur.execute("DELETE FROM products WHERE id = %s", [product_id])
@@ -106,6 +111,7 @@ def delete_product(product_id):
 
 
 @app.route('/categories')
+@jwt_required()
 def get_categories():
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM categories")
@@ -122,6 +128,7 @@ def get_categories():
 
 
 @app.route('/categories/int:category_id')
+@jwt_required()
 def get_category(category_id):
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM categories WHERE id = %s", [category_id])
@@ -137,6 +144,7 @@ def get_category(category_id):
 
 
 @app.route('/categories', methods=['POST'])
+@jwt_required()
 def create_category():
     name = request.json['name']
     cur = mysql.connection.cursor()
@@ -146,6 +154,7 @@ def create_category():
 
 
 @app.route('/categories/int:category_id', methods=['PUT'])
+@jwt_required()
 def update_category(category_id):
     name = request.json['name']
     cur = mysql.connection.cursor()
@@ -156,6 +165,7 @@ def update_category(category_id):
 
 
 @app.route('/categories/int:category_id', methods=['DELETE'])
+@jwt_required()
 def delete_category(category_id):
     cur = mysql.connection.cursor()
     cur.execute("DELETE FROM categories WHERE id = %s", [category_id])
