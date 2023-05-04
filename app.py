@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_mysqldb import MySQL
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
 
 app = Flask(__name__)
@@ -7,7 +8,35 @@ app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'admin'
 app.config['MYSQL_PASSWORD'] = 'password'
 app.config['MYSQL_DB'] = 'mydatabase'
+
+# Update with your own secret key
+app.config['JWT_SECRET_KEY'] = 'super-secret-key'
 mysql = MySQL(app)
+jwt = JWTManager(app)
+
+# Login endpoint
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.json['username']
+    password = request.json['password']
+
+    # Check if username and password are valid
+    if username == 'myusername' and password == 'mypassword':
+        access_token = create_access_token(identity=username)
+        return jsonify({'access_token': access_token})
+    else:
+        return jsonify({'error': 'Invalid username or password'})
+
+# Logout endpoint
+
+
+@app.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    # Simply return a message indicating that the user has logged out
+    return jsonify({'message': 'User logged out successfully'})
 
 
 @app.route('/products')
