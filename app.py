@@ -3,6 +3,9 @@ from flask_mysqldb import MySQL
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
+from flask_bcrypt import Bcrypt
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
@@ -22,54 +25,107 @@ jwt = JWTManager(app)
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
 
+# encryption
+bcrypt = Bcrypt()
+
+
+# initialize sql
+db = SQLAlchemy()
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    products = db.relationship('Product', backref='user', lazy=True)
+
+    def __repr__(self):
+        return f"User(id={self.id}, username='{self.username}')"
+
+
+class Category(db.Model):
+    __tablename__ = 'categories'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    products = db.relationship('Product', backref='category', lazy=True)
+
+    def __repr__(self):
+        return f"Category(id={self.id}, name='{self.name}')"
+
+
+class Product(db.Model):
+    __tablename__ = 'products'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey(
+        'categories.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    def __repr__(self):
+        return f"Product(id={self.id}, name='{self.name}', category_id={self.category_id}, user_id={self.user_id})"
+
+
+@app.route('/register', methods=['POST'])
+def register():
+    # get the request data
+    data = request.get_json()
+
+    # check if the username and password are provided in the request
+    if not data.get('username') or not data.get('password'):
+        return jsonify({'error': 'Missing username or password'}), 400
+
+    # check if the username already exists in the database
+    existing_user = User.query.filter_by(username=data['username']).first()
+    if existing_user:
+        return jsonify({'error': 'Username already exists'}), 400
+
+    # create a new user object and hash the password using bcrypt
+    password_hash = bcrypt.generate_password_hash(
+        data['password']).decode('utf-8')
+    new_user = User(username=data['username'], password=password_hash)
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({'message': 'User registered successfully'}), 201
+
 # Login endpoint
 
 
 @app.route('/login', methods=['POST'])
 @csrf.protect
 def login():
-    username = request.json['username']
-    password = request.json['password']
 
-    # Check if username and password are valid
-    if username == 'myusername' and password == 'mypassword':
-        access_token = create_access_token(identity=username)
-        return jsonify({'access_token': access_token})
-    else:
-        return jsonify({'error': 'Invalid username or password'})
+    username = request.json.get('username', None)
+    password = request.json.get('password', None)
+    if not username or not password:
+        return jsonify({'msg': 'Please provide both username and password'}), 400
+
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT * FROM users WHERE username = %s", [username])
+    user = cur.fetchone()
+    cur.close()
+
+    if not user or not check_password_hash(user[2], password):
+        return jsonify({'msg': 'Invalid username or password'}), 401
+
+    access_token = create_access_token(identity=user[0])
+    return jsonify({'access_token': access_token}), 200
+
 
 # Logout endpoint
-
-
 @app.route('/logout', methods=['POST'])
 @csrf.protect
 @jwt_required()
 def logout():
-    # Simply return a message indicating that the user has logged out
+
     return jsonify({'message': 'User logged out successfully'})
-
-
-@app.route('/products')
-@jwt_required()
-@cache.cached(timeout=300)  # Cache the response for 5 minutes
-def get_products():
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM products")
-    rows = cur.fetchall()
-    products = []
-    for row in rows:
-        product = {
-            'id': row[0],
-            'name': row[1],
-            'description': row[2],
-            'category_id': row[3]
-        }
-        products.append(product)
-    return jsonify(products)
 
 
 @app.route('/products/<int:product_id>')
 @jwt_required()
+@cache.cached(timeout=300)  # Cache the response for 5 minutes
 def get_product(product_id):
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM products WHERE id = %s", [product_id])
@@ -92,14 +148,26 @@ def get_product(product_id):
 @app.route('/products', methods=['POST'])
 @jwt_required()
 def create_product():
-    name = request.json['name']
-    description = request.json['description']
-    category_id = request.json['category_id']
-    cur = mysql.connection.cursor()
-    cur.execute("INSERT INTO products (name, description, category_id) VALUES (%s, %s, %s)",
-                (name, description, category_id))
-    mysql.connection.commit()
-    return jsonify({'success': 'Product created successfully'}), 201
+
+    # get the request data
+    data = request.get_json()
+
+    # check if the required fields are present in the request
+    if not data.get('name') or not data.get('description') or not data.get('category_id'):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    # check if the category exists
+    category = Category.query.get(data['category_id'])
+    if not category:
+        return jsonify({'error': 'Invalid category ID'}), 400
+
+    # create a new product object and add it to the database
+    product = Product(name=data['name'], description=data['description'],
+                      category_id=data['category_id'], user_id=get_jwt_identity())
+    db.session.add(product)
+    db.session.commit()
+
+    return jsonify({'message': 'Product created successfully', 'product': product}), 201
 
 
 @app.route('/products/<int:product_id>', methods=['PUT'])
