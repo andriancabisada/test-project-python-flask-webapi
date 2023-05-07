@@ -5,7 +5,6 @@ from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
@@ -107,7 +106,7 @@ def login():
     user = cur.fetchone()
     cur.close()
 
-    if not user or not check_password_hash(user[2], password):
+    if not user or not bcrypt.check_password_hash(user[2], password):
         return jsonify({'msg': 'Invalid username or password'}), 401
 
     access_token = create_access_token(identity=user[0])
@@ -121,6 +120,26 @@ def login():
 def logout():
 
     return jsonify({'message': 'User logged out successfully'})
+
+
+@app.route('/products')
+@jwt_required()
+@cache.cached(timeout=300)  # Cache the response for 5 minutes
+@csrf.exempt  # Exempt this endpoint from CSRF protection
+def get_products():
+    cur = mysql.connection.cursor()
+    cur.execute("SELECT * FROM products")
+    rows = cur.fetchall()
+    products = []
+    for row in rows:
+        product = {
+            'id': row[0],
+            'name': row[1],
+            'description': row[2],
+            'category_id': row[3]
+        }
+        products.append(product)
+    return jsonify(products)
 
 
 @app.route('/products/<int:product_id>')
@@ -228,14 +247,17 @@ def get_category(category_id):
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM categories WHERE id = %s", [category_id])
     row = cur.fetchone()
-    if row:
-        category = {
-            'id': row[0],
-            'name': row[1]
-        }
-        return jsonify(category)
-    else:
-        return jsonify({'error': 'Category not found'})
+    if not row:
+        return jsonify({'error: Category not foound'}), 404
+
+    user_id = get_jwt_identity()
+    if user_id != row['user_id']:
+        return jsonify({'error': 'Unauthorized access'}), 403
+
+    return jsonify({
+        'id': row['id'],
+        'name': row['name']
+    })
 
 
 @app.route('/categories', methods=['POST'])
