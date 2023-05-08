@@ -2,6 +2,13 @@ Test Project for Python Flask API
 
 This is a RESTful API for managing products and categories. The API is built using Flask and uses a MySQL database for storage. JWT authentication is used for user authentication and access control.
 
+Installation
+
+    Clone the repository: git clone https://github.com/andriancabisada/test-project-python-flask-webapi
+    Install dependencies: pip install -r requirements.txt
+    Configure database: create database database_name and set the credentials in app.py.
+    Run the application: python app.py
+    Access the API at http://localhost:5000/
 
 Endpoints
 
