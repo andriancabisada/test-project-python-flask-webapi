@@ -4,6 +4,8 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token, ge
 from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
 from flask_bcrypt import Bcrypt
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 
 app = Flask(__name__)
@@ -26,9 +28,11 @@ csrf = CSRFProtect(app)
 # encryption
 bcrypt = Bcrypt()
 
+# limiter
+limiter = Limiter(app, key_func=get_remote_address)
 
 # initialize sql
-db = SQLAlchemy()
+db = MySQL()
 
 
 class User(db.Model):
@@ -125,6 +129,7 @@ def logout():
 @jwt_required()
 @cache.cached(timeout=300)  # Cache the response for 5 minutes
 @csrf.exempt  # Exempt this endpoint from CSRF protection
+@limiter.limit('5 per minute')
 def get_products():
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM products")
