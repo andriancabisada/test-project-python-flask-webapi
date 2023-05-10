@@ -4,7 +4,6 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token, ge
 from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
 from flask_bcrypt import Bcrypt
-from flask_sqlalchemy import SQLAlchemy
 
 
 app = Flask(__name__)
