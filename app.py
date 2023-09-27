@@ -6,12 +6,19 @@ from flask_caching import Cache
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_sqlalchemy import SQLAlchemy
+import secrets
 
-
+secret_key = secrets.token_hex(32) 
 app = Flask(__name__)
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'admin'
-app.config['MYSQL_PASSWORD'] = 'password'
+
+app.config['SECRET_KEY'] = secret_key
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
+
+app.config['MYSQL_HOST'] = '127.0.0.1'
+app.config['MYSQL_USER'] = 'user'
+app.config['MYSQL_PASSWORD'] = 'password311'
 app.config['MYSQL_DB'] = 'mydatabase'
 
 
@@ -19,11 +26,11 @@ cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 # Update with your own secret key
 app.config['JWT_SECRET_KEY'] = 'super-secret-key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://user:password311@127.0.0.1/mydatabase'
+
 mysql = MySQL(app)
 jwt = JWTManager(app)
 
-# Initialize CSRF protection
-csrf = CSRFProtect(app)
 
 # encryption
 bcrypt = Bcrypt()
@@ -32,7 +39,7 @@ bcrypt = Bcrypt()
 limiter = Limiter(app, key_func=get_remote_address)
 
 # initialize sql
-db = MySQL()
+db = SQLAlchemy(app)
 
 
 class User(db.Model):
@@ -96,7 +103,7 @@ def register():
 
 
 @app.route('/login', methods=['POST'])
-@csrf.protect
+#@csrf.protect
 def login():
 
     username = request.json.get('username', None)
@@ -118,7 +125,7 @@ def login():
 
 # Logout endpoint
 @app.route('/logout', methods=['POST'])
-@csrf.protect
+#@csrf.protect
 @jwt_required()
 def logout():
 
@@ -195,7 +202,7 @@ def create_product():
 
 @app.route('/products/<int:product_id>', methods=['PUT'])
 @jwt_required()
-def update_product(product_id):
+def update_product(product_id,):
     name = request.json['name']
     description = request.json['description']
     category_id = request.json['category_id']
@@ -208,7 +215,7 @@ def update_product(product_id):
 
 @app.route('/products/<int:product_id>', methods=['DELETE'])
 @jwt_required()
-def delete_product(product_id):
+def delete_product(product_id, ):
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM products WHERE id = %s", [product_id])
     product = cur.fetchone()
@@ -247,7 +254,7 @@ def get_categories():
 @jwt_required()
 @cache.cached(timeout=300)
 @csrf.exempt  # Exempt this endpoint from CSRF protection
-def get_category(category_id):
+def get_category(category_id ):
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM categories WHERE id = %s", [category_id])
     row = cur.fetchone()
@@ -276,7 +283,7 @@ def create_category():
 
 @app.route('/categories/int:category_id', methods=['PUT'])
 @jwt_required()
-def update_category(category_id):
+def update_category(category_id ):
     name = request.json['name']
     cur = mysql.connection.cursor()
     cur.execute("UPDATE categories SET name = %s WHERE id = %s",
@@ -287,7 +294,7 @@ def update_category(category_id):
 
 @app.route('/categories/int:category_id', methods=['DELETE'])
 @jwt_required()
-def delete_category(category_id):
+def delete_category(category_id ):
     cur = mysql.connection.cursor()
     cur.execute("DELETE FROM categories WHERE id = %s", [category_id])
     mysql.connection.commit()
